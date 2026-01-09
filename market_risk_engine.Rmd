@@ -1,0 +1,90 @@
+---
+title: "Market Risk Engine: VaR/ ES & Backtesting"
+author: "Alessandro D'Atria"
+output: html_document
+---
+
+# 1. Setup Environment
+```{r setup, message=FALSE, warning=FALSE}
+# Install packages if missing
+if (!require("quantmod")) install.packages("quantmod")
+if (!require("PerformanceAnalytics")) install.packages("PerformanceAnalytics")
+if (!require("ggplot2")) install.packages("ggplot2")
+if (!require("dplyr")) install.packages("dplyr")
+# Download data from Yahoo Finance for XLE (Energy ETF)
+# We start from 2020 to include the Covid crash and 2022 Energy Crisis
+getSymbols("XLE", src = "yahoo", from = "2020-01-01", to = Sys.Date())
+
+# Calculate Daily Log Returns
+returns_xle <- dailyReturn(XLE$XLE.Adjusted, type = "log")
+colnames(returns_xle) <- "XLE_Returns"
+
+# 3. VaR & Expected Shortfall (ES) Calculation
+# Basel III has shifted focus from VaR to Expected Shortfall (ES) to capture tail risk.
+# We calculate both:
+# - VaR 99%: The threshold loss.
+# - ES 97.5% (or 99%): The average loss BEYOND the threshold.
+
+conf_level <- 0.99
+lookback_window <- 250 
+
+# Function to calculate Historical VaR and ES
+calc_risk_metrics <- function(x) {
+  # VaR is the quantile
+  var_val <- quantile(x, probs = 1 - conf_level)
+  # ES is the mean of returns worse than VaR (Tail Mean)
+  es_val <- mean(x[x < var_val])
+  return(c(var_val, es_val))
+}
+
+# Apply Rolling Window
+risk_metrics <- rollapply(returns_xle, width = lookback_window, 
+                          FUN = calc_risk_metrics, 
+                          by.column = FALSE, align = "right")
+
+# Clean and Merge
+colnames(risk_metrics) <- c("VaR_99", "ES_99")
+data_plot <- na.omit(merge(returns_xle, risk_metrics))
+colnames(data_plot)[1] <- "Actual_Returns"
+
+# 4. Backtesting & Advanced Visualization
+# Identify Breaches
+breaches <- data_plot$Actual_Returns < data_plot$VaR_99
+num_breaches <- sum(breaches)
+breach_pct <- (num_breaches / nrow(data_plot)) * 100
+
+df_gg <- data.frame(Date = index(data_plot), coredata(data_plot))
+df_breaches <- df_gg[breaches, ] 
+
+p <- ggplot(df_gg, aes(x = Date)) +
+  # 1.Returns
+  geom_bar(aes(y = Actual_Returns), stat = "identity", fill = "grey", alpha = 0.5) +
+  
+  # 2. VaR 99%
+  geom_line(aes(y = VaR_99, color = "VaR 99% (Threshold)"), size = 0.8) +
+  
+  # 3. Expected Shortfall
+  geom_line(aes(y = ES_99, color = "Expected Shortfall (Avg Tail Loss)"), size = 0.8, linetype = "dashed") +
+  
+  # 4. Breaches
+  geom_point(data = df_breaches, aes(y = Actual_Returns), color = "red", size = 2) +
+  
+  labs(title = "VaR vs Expected Shortfall",
+       subtitle = paste0("Asset: XLE (Energy) | VaR Breaches: ", num_breaches, " (", round(breach_pct, 2), "%)"),
+       caption = "Data Source: Yahoo Finance (Adj. Close) | Methodology: Historical Simulation (250D)",
+       y = "Log Returns", x = "Date", color = NULL) +
+       
+  scale_color_manual(values = c("VaR 99% (Threshold)" = "blue", 
+                                "Expected Shortfall (Avg Tail Loss)" = "orange")) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(hjust = 0.5, face = "bold"), 
+    plot.subtitle = element_text(hjust = 0.5, size = 11, color = "black"),
+    plot.caption = element_text(hjust = 0.5, color = "grey50") # C
+  )
+
+
+print(p)
+if (!dir.exists("output")) dir.create("output")
+ggsave("output/market_risk_es_chart.png", plot = p, width = 10, height = 6)
