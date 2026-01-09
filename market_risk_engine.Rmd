@@ -3,8 +3,6 @@ title: "Market Risk Engine: VaR/ ES & Backtesting"
 author: "Alessandro D'Atria"
 output: html_document
 ---
-
-# 1. Setup Environment
 ```{r setup, message=FALSE, warning=FALSE}
 # Install packages if missing
 if (!require("quantmod")) install.packages("quantmod")
