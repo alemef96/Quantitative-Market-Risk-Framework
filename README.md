@@ -1,4 +1,4 @@
-# Quantitative Market Risk Framework 📊
+# Quantitative Market Risk Framework
 
 ## Overview
 This repository hosts a quantitative framework for **Market Risk Management** and **Model Validation**, developed in **R**. 
@@ -15,7 +15,7 @@ Current focus: **Energy Sector volatility** (using XLE ETF as a proxy for commod
     * Detection of **Breaches** (Exceptions) where actual loss exceeds VaR.
     * Visual inspection of model performance over time.
 
-## 📈 Validation Results
+## Validation Results
 The chart below illustrates the backtesting performance on the Energy Sector (XLE).
 * **Blue Line:** Value at Risk (99% Threshold).
 * **Orange Line:** Expected Shortfall (Average loss when things go wrong).
