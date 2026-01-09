@@ -9,6 +9,8 @@ if (!require("quantmod")) install.packages("quantmod")
 if (!require("PerformanceAnalytics")) install.packages("PerformanceAnalytics")
 if (!require("ggplot2")) install.packages("ggplot2")
 if (!require("dplyr")) install.packages("dplyr")
+
+setwd("C:/Users/Alessandro D'Atria/Desktop/Github/Market Risk")
 # Download data from Yahoo Finance for XLE (Energy ETF)
 # We start from 2020 to include the Covid crash and 2022 Energy Crisis
 getSymbols("XLE", src = "yahoo", from = "2020-01-01", to = Sys.Date())
@@ -84,5 +86,10 @@ p <- ggplot(df_gg, aes(x = Date)) +
 
 
 print(p)
-if (!dir.exists("output")) dir.create("output")
+output_dir <- "../output"
+
+if (!dir.exists("output")) {
+  dir.create("output")
+}
+
 ggsave("output/market_risk_es_chart.png", plot = p, width = 10, height = 6)
